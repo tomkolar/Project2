@@ -94,29 +94,15 @@ class Graph {
 		//		  graph
 		void findHighestWeightPath();
 
-		// displayAll()
-		//   Purpose: Display the graph to cout
-		//	 Precondtions:
-		//   Postcondtions:
-		//		- cout will dispaly a text description of the graph
-		void displayAll();
-
-		// display(int from, int to)
-		//   Purpose: Display the graph to cout
-		//	 Precondtions: 0 < to, from <= numberOfVertices
-		//   Postcondtions:
-		//		- cout will dispaly a text description of the graph
-		void display(int from, int to);
+		string resultString();
 
 private:
 
 
 		struct Vertex {
 			string label;  // name of vertex
-			bool isStart;
-			bool isEnd;
 			int weight; // highest path weight to get to the vertex
-			Vertex* previous; // previous vertex in path of highest weight
+			Edge* edgeForHWPath; // edge that was used for the highest weight path
 		};
 
 		struct Edge {
@@ -133,24 +119,14 @@ private:
 		map<string, Vertex*> verticeMap;
 		Vertex* startNode;
 		Vertex* endNode;
+		Vertex* highestWeightNode;
 
 		bool isStartConstrained();
 		bool isEndConstrained();
 		void addVertex(vector<string>& tokens);
 		void addEdge(vector<string>& tokens);
-
-		// initialize(int size)
-		//   Purpose: Initialize the graph
-		//	 Precondtions: Graph is empty
-		//   Postcondtions:
-		//		- weight array initialized so all values are 0
-		void initialize(int size);
-
-		void shortestPathHelper(int current);
-		void writeFromToDetails(int from, int to);
-		void writeFromToHeader();
-		void writeShortestPath(int from, int to);
-		void writeShortestPathVertices(int from, int to);
+		string getPathStartNodeLabel();
+		string getPath();
 
 };
 #endif

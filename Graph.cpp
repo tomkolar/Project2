@@ -39,7 +39,7 @@
 #include <fstream>
 #include <map>
 #include <vector>
-
+#include <cstddef>
 using namespace std;
 
 
@@ -50,6 +50,7 @@ using namespace std;
 Graph::Graph() {
 	startNode = NULL;
 	endNode = NULL;
+	highestWeightNode = NULL;
 }
 
 // ~Graph(void)
@@ -114,7 +115,7 @@ void Graph::addVertex(vector<string>& tokens) {
 	// Create vetex and intialize 
 	Vertex* vertex;
 	vertex->weight = INT_MIN;
-	vertex->previous = NULL;
+	vertex->edgeForHWPath = NULL;
 
 	// Populate from tokens
 	vertex->label = tokens.at(1);
@@ -162,7 +163,7 @@ void Graph::findHighestWeightPath() {
 	for (Vertex* vertex : vertices) {
 		// Check to for start constraints
 		if (isStartConstrained() && !startFound) {
-			if (vertex->isStart) 
+			if (vertex->label == startNode->label)
 				startFound = true;
 			else
 				// Haven't found start yet, so no need to calculate weight
@@ -180,161 +181,101 @@ void Graph::findHighestWeightPath() {
 		}
 		if (isDepthZero) {
 			vertex->weight = 0;
+			continue;
 		}
 
+		// Find the path with the highest weight to this vertex
+		vertex->weight = 0;
+		vector<Edge*>& vertexEdges = edges.find(vertex->label)->second;
+		for (Edge* edge : vertexEdges) {
+			// Find edges where this vertex is the end node
+			if (edge->end->label == vertex->label) {
+				// Calculate weight (parent node weight plus edge weight)
+				int pathWeight = edge->start->weight + edge->weight;
 
-
-
-	
-	}
-	// Intialize the shortestPath matrix
-	for (int i=1; i <= numberOfVertices; i++) {
-		for (int j=1; j <= numberOfVertices; j++) {
-			shortestPath[i][j].dist = INT_MAX;
-			shortestPath[i][j].visited = false;
-			shortestPath[i][j].path = 0;
-		}
-	}
-
-	// Iterate through the vertices
-	for (int i=1; i <= numberOfVertices; i++) {
-		// Intialize shortestPath to 0 for this vertex
-		shortestPath[i][i].dist = 0;
-
-		// Find the shortest paths for this vertex
-		shortestPathHelper(i);
-	}
-}
-
-void Graph::shortestPathHelper(int current){
-
-	// Find the next adjacent vertex with the lowest cost
-	int nextLowestCost = INT_MAX;
-	int next = 0;
-	for (int j = 1; j <= numberOfVertices; j++)
-		if (!shortestPath[current][j].visited
-			&& shortestPath[current][j].dist < nextLowestCost) {
-				nextLowestCost = shortestPath[current][j].dist;
-				next = j;
-		}
-
-
-	// Base Case - There are no other adjacent nodes to check
-	if (nextLowestCost == INT_MAX)
-		return;
-
-	// Add next lowest to vertexSet
-	shortestPath[current][next].visited = true;
-
-	// Update costs for all adjacent vertices that have not been visited
-	for (int j = 1; j <= numberOfVertices; j++)
-		if (cost[next][j] != INT_MAX && !shortestPath[current][j].visited) {
-			int costThroughNext = shortestPath[current][next].dist + cost[next][j];
-			// Update cost if path is shorter through next node
-			if (shortestPath[current][j].dist > costThroughNext){
-				shortestPath[current][j].dist = costThroughNext;
-				shortestPath[current][j].path = next;
+				// If path weight bigger than any other found so far then
+				// it becomes the new weight for the vertex
+				if (pathWeight > vertex->weight) {
+					vertex->weight = pathWeight;
+					vertex->edgeForHWPath = edge;
+				}
 			}
 		}
 
-	// Recursivley visit rest of edges
-	shortestPathHelper(current);
-}
-
-// displayAll()
-//   Purpose: Display the graph to cout
-//	 Precondtions:
-//   Postcondtions:
-//		- cout will dispaly a text description of the graph
-void Graph::displayAll() {
-	// Write header
-	cout << "Description            ";
-	writeFromToHeader();
-
-	// Iterate through vertices
-	for (int i=1; i <= numberOfVertices; i++) {
-		// Write vertex name
-		cout << data[i] << endl;
-
-		// Iterate through all ajdacent vertices
-		for (int j=1; j <= numberOfVertices; j++) {
-			// Don't write anything for same vertex
-			if (i == j)
-				continue;
-
-			// Write line header spacing
-			cout << "                       ";
-
-			// Write the from to details
-			writeFromToDetails(i, j);
+		// Check for end constraint
+		if (isEndConstrained()) {
+			if (vertex->label == endNode->label) {
+				highestWeightNode = vertex;
+				break;
+			}
+			// Continue looking for the end vertex as the highest weight path must end there
+			continue;
 		}
-	}
 
-	cout << endl;
+		// Set highestWeightNode
+		if (highestWeightNode == NULL || vertex->weight > highestWeightNode->weight)
+			highestWeightNode = vertex;
+
+	}  // end vertices for loop
+	
 }
 
-void Graph::writeFromToHeader(){
-	cout << "From node    To node    Dijkstra's  Path"
-		 << endl;
+bool Graph::isStartConstrained() {
+	return startNode == NULL;
 }
 
-void Graph::writeFromToDetails(int from, int to) {
-	// Write from node and to node
-	cout << "    " << from << "          " << to;
+bool Graph::isEndConstrained() {
+	return endNode == NULL;
+}
 
-	// Write shortest distance and path
-	cout << "        ";
-	if (shortestPath[from][to].dist == INT_MAX)
-		cout << "---";
+string Graph::resultString() {
+	stringstream ss;
+	if (highestWeightNode == NULL)
+		ss << "No Path Found!";
 	else {
-		cout << shortestPath[from][to].dist
-				<< "          ";
-		writeShortestPath(from, to);
+		ss
+			<< "Score: " << highestWeightNode->weight << "\n"
+			<< "Start: " << getPathStartNodeLabel() << "\n"
+			<< "End: " << highestWeightNode->label << "\n"
+			<< "Path: " << getPath() << "\n";
 	}
 
-	// End the line
-	cout << endl;
+	return ss.str();
 }
 
-void Graph::writeShortestPath(int from, int to) {
-	//Base case - past beginning node
-	if (to == 0)
-		return;
+string Graph::getPathStartNodeLabel() {
 
-	// Walk the path backwards
-	writeShortestPath(from, shortestPath[from][to].path);
-	cout << to << " ";
-}
+	// Base Case
+	if (highestWeightNode == NULL)
+		return "";
 
-// display(int from, int to)
-//   Purpose: Display the graph to cout
-//	 Precondtions: 0 < to, from <= numberOfVertices
-//   Postcondtions:
-//		- cout will dispaly a text description of the graph
-void Graph::display(int from, int to)  {
-	// Check if within range of number of vertices
-	if (from <= 0 || from > numberOfVertices
-		|| to <= 0 || to > numberOfVertices){
-		cout << "Vertext not in graph" << endl << endl;
-		return;
+	// Search for start node (previous is NULL)
+	Vertex* aNode = highestWeightNode;
+	while (aNode->edgeForHWPath != NULL) {
+		Edge* anEdge = aNode->edgeForHWPath;
+		aNode = anEdge->start
 	}
 
-	// Write the path
-	writeFromToHeader();
-	writeFromToDetails(from, to);
-	if (shortestPath[from][to].dist != INT_MAX)
-		writeShortestPathVertices(from, to);
-
-	cout << endl;
+	return aNode->label;
 }
 
-void Graph::writeShortestPathVertices(int from, int to){
-	//Base case - past beginning node
-	if (to == 0)
-		return;
+string Graph::getPath() {
 
-	// Walk the path backwards
-	writeShortestPathVertices(from, shortestPath[from][to].path);
-	cout << data[to] << endl;
+	// Base Case
+	if (highestWeightNode == NULL)
+		return "";
+
+	// Walk path backwards and build string
+	stringstream ss;
+	Vertex* aNode = highestWeightNode;
+	while (aNode != NULL) {
+		Edge* anEdge = aNode->edgeForHWPath;
+		ss << anEdge->label;
+		aNode = anEdge->start;
+	}
+
+	// Return reverse of stringstream (since we built the string backwards)
+	string reversePath = ss.str();
+	return string(reversePath.rbegin(), reversePath.rend());
+
 }
-
