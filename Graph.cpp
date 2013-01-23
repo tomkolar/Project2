@@ -37,6 +37,8 @@
 #include <limits>
 #include <iostream>
 #include <fstream>
+#include <map>
+#include <vector>
 
 using namespace std;
 
@@ -46,7 +48,8 @@ using namespace std;
 //	Preconditons:
 //	Postconditions:
 Graph::Graph() {
-
+	startNode = NULL;
+	endNode = NULL;
 }
 
 // ~Graph(void)
@@ -80,7 +83,7 @@ Graph::~Graph(){
 //		  by the infile
 void Graph::buildGraph(string& fileName) {
 
-    ifstream inFile(fileName);
+	ifstream inFile(fileName);
 	string line;
 	bool edgesInit = false;
 
@@ -89,41 +92,57 @@ void Graph::buildGraph(string& fileName) {
 		StringUtilities::split(line, ' ', tokens);
 
 		// Add vertices
-		if (tokens.at(0) == "V") {
-			Vertex* vertex;
-			vertex->label = tokens.at(1);
-			if (tokens.size() > 2)
-				if (tokens.at(2) == "START")
-					vertex->isStart = true;
-				else if (tokens.at(2) == "END")
-					vertex->isEnd = true;
-			vertices.push_back(vertex);
-			verticeMap[vertex->label] = vertex;;
-		}
+		if (tokens.at(0) == "V") 
+			addVertex(tokens);
 		// Add Edges
 		else if (tokens.at(0) == "E") {
 			// Initialize edges if first time encountered an edge
 			if (!edgesInit) {
 				numVertices = vertices.size();
 				for (Vertex* vertex : vertices)
-					edges[vertex->label] = vector<Edge>();
+					edges[vertex->label] = vector<Edge*>();
+				edgesInit = true;
 			}
-
-			// Create Edge
-			Edge* edge;
-			edge->label = tokens.at(1);
-			edge->start = verticeMap.find(tokens.at(2));
-			edge->end = verticeMap.find(tokens.at(3));
-			edge->weight = atoi(tokens.at(4).c_str());
-
-			// Add to edges collection
-			vector<Edge*>& startEdges = edges.find((edge->start)->label)->first;
-			startEdges.push_back(edge);
-			vector<Edge*>& endEdges = edges.find((edge->start)->label)->first;
-			endEdges.push_back(edge);
+			addEdge(tokens);
 		}
 	}
 
+}
+
+void Graph::addVertex(vector<string>& tokens) {
+
+	// Create vetex and intialize 
+	Vertex* vertex;
+	vertex->weight = INT_MIN;
+	vertex->previous = NULL;
+
+	// Populate from tokens
+	vertex->label = tokens.at(1);
+	if (tokens.size() > 2)
+		if (tokens.at(2) == "START")
+			startNode = vertex;
+		else if (tokens.at(2) == "END")
+			endNode = vertex;
+
+	// Add to collections
+	vertices.push_back(vertex);
+	verticeMap[vertex->label] = vertex;;
+}
+
+void Graph::addEdge(vector<string>& tokens) {
+
+	// Create Edge and populate from tokens
+	Edge* edge;
+	edge->label = tokens.at(1);
+	edge->start = verticeMap.find(tokens.at(2))->second;
+	edge->end = verticeMap.find(tokens.at(3))->second;
+	edge->weight = atoi(tokens.at(4).c_str());
+
+	// Add to edges collection
+	vector<Edge*>& startEdges = edges.find((edge->start)->label)->second;
+	startEdges.push_back(edge);
+	vector<Edge*>& endEdges = edges.find((edge->start)->label)->second;
+	endEdges.push_back(edge);
 }
 
 // findShortestPath()
@@ -137,10 +156,36 @@ void Graph::buildGraph(string& fileName) {
 //		  graph
 void Graph::findHighestWeightPath() {
 
+	bool startFound = false;
+
 	// Iterate through the vertices
-	for (Vertex vertex : vertices) {
+	for (Vertex* vertex : vertices) {
+		// Check to for start constraints
+		if (isStartConstrained() && !startFound) {
+			if (vertex->isStart) 
+				startFound = true;
+			else
+				// Haven't found start yet, so no need to calculate weight
+				continue;
+		}
+
 		// Check for depth 0 (no edges leading to this vertex)
-		if (edges)
+		bool isDepthZero = true;
+		vector<Edge*>& vertexEdges = edges.find(vertex->label)->second;
+		for (Edge* edge : vertexEdges) {
+			if (edge->end->label == vertex->label) {
+				isDepthZero = false;
+				break;
+			}
+		}
+		if (isDepthZero) {
+			vertex->weight = 0;
+		}
+
+
+
+
+	
 	}
 	// Intialize the shortestPath matrix
 	for (int i=1; i <= numberOfVertices; i++) {

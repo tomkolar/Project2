@@ -113,9 +113,9 @@ private:
 
 		struct Vertex {
 			string label;  // name of vertex
-			bool isStart = false;
-			bool isEnd = false;
-			int weight = INT_MIN; // highest path weight to get to the vertex
+			bool isStart;
+			bool isEnd;
+			int weight; // highest path weight to get to the vertex
 			Vertex* previous; // previous vertex in path of highest weight
 		};
 
@@ -131,6 +131,13 @@ private:
 		map<string, vector<Edge*>> edges; // Collection of edges
 		int numVertices; // number of vertices in the graph
 		map<string, Vertex*> verticeMap;
+		Vertex* startNode;
+		Vertex* endNode;
+
+		bool isStartConstrained();
+		bool isEndConstrained();
+		void addVertex(vector<string>& tokens);
+		void addEdge(vector<string>& tokens);
 
 		// initialize(int size)
 		//   Purpose: Initialize the graph
