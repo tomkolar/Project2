@@ -10,17 +10,17 @@
 //*  *																    *
 //*  ******** WARNING *****WARNING ***** WARNING ************************
 //*
-//*  Use buildGraph(istream& infile) to create a graph from
-//*  a text file.  See notes on buildGraph method for expected
+//*  Use buildWDAGraph(istream& infile) to create a WDAGraph from
+//*  a text file.  See notes on buildWDAGraph method for expected
 //*  format of data in the file.
 //*
 //*  Use findShortestPath() to run dijkstra's algorithm and determine
-//*  the shortest path from all nodes to all nodes in the graph.
+//*  the shortest path from all nodes to all nodes in the WDAGraph.
 //*
 //*  Displaying Path:  You must call findShortestPath() before using
 //*  either of the display options
 //*
-//*		- Use displayAll() to display all vertices in the graph and the
+//*		- Use displayAll() to display all vertices in the WDAGraph and the
 //*		  shortest path as determined by dijsktra's algorithm.
 //*
 //*		- Use display(int from, int to) to display the shortest path
@@ -32,7 +32,7 @@
 //*  Created: 1-21-12
 //*
 //****************************************************
-#include "Graph.h"
+#include "WDAGraph.h"
 #include "StringUtilities.h"
 #include <limits>
 #include <iostream>
@@ -40,29 +40,30 @@
 #include <map>
 #include <vector>
 #include <cstddef>
+#include <sstream>
 using namespace std;
 
 
-// Graph()
-//  Purpose: Create a Graph
+// WDAGraph()
+//  Purpose: Create a WDAGraph
 //	Preconditons:
 //	Postconditions:
-Graph::Graph() {
+WDAGraph::WDAGraph() {
 	startNode = NULL;
 	endNode = NULL;
 	highestWeightNode = NULL;
 }
 
-// ~Graph(void)
-//  Purpose: Destructor for Graph Object
+// ~WDAGraph(void)
+//  Purpose: Destructor for WDAGraph Object
 //  Preconditions:
 //  Postcondtions:
-Graph::~Graph(){
+WDAGraph::~WDAGraph(){
 
 }
 
-// buildGraph(istream& infile)
-//   Purpose: Build a graph from an input file
+// buildWDAGraph(istream& infile)
+//   Purpose: Build a WDAGraph from an input file
 //		- NO ERROR CHECKING FOR INCORRECT DATA FORMATS!
 //		  The data in the input file is assumed to be in the
 //        correct format as specified in the precondtions. This
@@ -78,11 +79,11 @@ Graph::~Graph(){
 //			edge.  If there is an edge from node 1 to node 2 with
 //			a label of 10, the data is: 1 2 10.
 //		  - A zero for the first integer signifies the end of the data
-//          for that one graph.
+//          for that one WDAGraph.
 //   Postcondtions:
-//		- The object will be popultated with the graph data defined
+//		- The object will be popultated with the WDAGraph data defined
 //		  by the infile
-void Graph::buildGraph(string& fileName) {
+void WDAGraph::buildWDAGraph(string& fileName) {
 
 	ifstream inFile(fileName);
 	string line;
@@ -110,7 +111,7 @@ void Graph::buildGraph(string& fileName) {
 
 }
 
-void Graph::addVertex(vector<string>& tokens) {
+void WDAGraph::addVertex(vector<string>& tokens) {
 
 	// Create vetex and intialize 
 	Vertex* vertex;
@@ -119,18 +120,19 @@ void Graph::addVertex(vector<string>& tokens) {
 
 	// Populate from tokens
 	vertex->label = tokens.at(1);
-	if (tokens.size() > 2)
+	if (tokens.size() > 2) {
 		if (tokens.at(2) == "START")
 			startNode = vertex;
 		else if (tokens.at(2) == "END")
 			endNode = vertex;
+	}
 
 	// Add to collections
 	vertices.push_back(vertex);
 	verticeMap[vertex->label] = vertex;;
 }
 
-void Graph::addEdge(vector<string>& tokens) {
+void WDAGraph::addEdge(vector<string>& tokens) {
 
 	// Create Edge and populate from tokens
 	Edge* edge;
@@ -148,14 +150,14 @@ void Graph::addEdge(vector<string>& tokens) {
 
 // findShortestPath()
 //   Purpose: Use the dijkstra algorithm to find the shortest path
-//			  for all the vertices in the graph
-//	 Precondtions: Graph should be fully formed with appropriate costs
+//			  for all the vertices in the WDAGraph
+//	 Precondtions: WDAGraph should be fully formed with appropriate costs
 //			       in the cost array
 //   Postcondtions:
 //		- the shortestPath array will be populated with the data
 //		  corresponding to the shortest path for each vertext in the
-//		  graph
-void Graph::findHighestWeightPath() {
+//		  WDAGraph
+void WDAGraph::findHighestWeightPath() {
 
 	bool startFound = false;
 
@@ -186,7 +188,7 @@ void Graph::findHighestWeightPath() {
 
 		// Find the path with the highest weight to this vertex
 		vertex->weight = 0;
-		vector<Edge*>& vertexEdges = edges.find(vertex->label)->second;
+		vertexEdges = edges.find(vertex->label)->second;
 		for (Edge* edge : vertexEdges) {
 			// Find edges where this vertex is the end node
 			if (edge->end->label == vertex->label) {
@@ -220,15 +222,15 @@ void Graph::findHighestWeightPath() {
 	
 }
 
-bool Graph::isStartConstrained() {
+bool WDAGraph::isStartConstrained() {
 	return startNode == NULL;
 }
 
-bool Graph::isEndConstrained() {
+bool WDAGraph::isEndConstrained() {
 	return endNode == NULL;
 }
 
-string Graph::resultString() {
+string WDAGraph::resultString() {
 	stringstream ss;
 	if (highestWeightNode == NULL)
 		ss << "No Path Found!";
@@ -243,7 +245,7 @@ string Graph::resultString() {
 	return ss.str();
 }
 
-string Graph::getPathStartNodeLabel() {
+string WDAGraph::getPathStartNodeLabel() {
 
 	// Base Case
 	if (highestWeightNode == NULL)
@@ -251,26 +253,39 @@ string Graph::getPathStartNodeLabel() {
 
 	// Search for start node (previous is NULL)
 	Vertex* aNode = highestWeightNode;
-	while (aNode->edgeForHWPath != NULL) {
+	while (aNode->weight > 0) {
+		// Walk backwards until find the node with weight zero
 		Edge* anEdge = aNode->edgeForHWPath;
-		aNode = anEdge->start
+		aNode = anEdge->start;
 	}
 
 	return aNode->label;
 }
 
-string Graph::getPath() {
+string WDAGraph::getPath() {
 
 	// Base Case
 	if (highestWeightNode == NULL)
 		return "";
 
-	// Walk path backwards and build string
 	stringstream ss;
+
+	// Walk path backwards and build string
 	Vertex* aNode = highestWeightNode;
-	while (aNode != NULL) {
+	while (true) {
+		// Check for null node
+		if (aNode == NULL)
+			break;
+
+		// Add the label from the edge to the string stream
 		Edge* anEdge = aNode->edgeForHWPath;
 		ss << anEdge->label;
+
+		// Done if this is start node
+		if (aNode->weight == 0)
+			break;
+
+		// Walk backwards one node
 		aNode = anEdge->start;
 	}
 

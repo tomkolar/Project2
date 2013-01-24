@@ -4,22 +4,19 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../Edge.cpp \
-../Graph.cpp \
 ../StringUtilities.cpp \
-../Vertex.cpp 
+../WDAGraph.cpp \
+../driver.cpp 
 
 OBJS += \
-./Edge.o \
-./Graph.o \
 ./StringUtilities.o \
-./Vertex.o 
+./WDAGraph.o \
+./driver.o 
 
 CPP_DEPS += \
-./Edge.d \
-./Graph.d \
 ./StringUtilities.d \
-./Vertex.d 
+./WDAGraph.d \
+./driver.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

@@ -1,7 +1,7 @@
 //****************************************************
-//* Graph.h
+//* WDAGraph.h
 //*
-//*  This is the header file for the graph class which
+//*  This is the header file for the WDAGraph class which
 //*  is used to demonstate adjacentcy maxtrices and the
 //*  dijkstra's shortest path alogrithm.
 //*
@@ -14,17 +14,17 @@
 //*  *																    *
 //*  ******** WARNING *****WARNING ***** WARNING ************************
 //*
-//*  Use buildGraph(istream& infile) to create a graph from
-//*  a text file.  See notes on buildGraph method for expected
+//*  Use buildWDAGraph(istream& infile) to create a WDAGraph from
+//*  a text file.  See notes on buildWDAGraph method for expected
 //*  format of data in the file.
 //*
 //*  Use findShortestPath() to run dijkstra's algorithm and determine
-//*  the shortest path from all nodes to all nodes in the graph.
+//*  the shortest path from all nodes to all nodes in the WDAGraph.
 //*
 //*  Displaying Path:  You must call findShortestPath() before using
 //*  either of the display options
 //*
-//*		- Use displayAll() to display all vertices in the graph and the
+//*		- Use displayAll() to display all vertices in the WDAGraph and the
 //*		  shortest path as determined by dijsktra's algorithm.
 //*
 //*		- Use display(int from, int to) to display the shortest path
@@ -36,8 +36,8 @@
 //*  Created: 1-21-12
 //*
 //****************************************************
-#ifndef Graph_H
-#define Graph_H
+#ifndef WDAGraph_H
+#define WDAGraph_H
 #include <iostream>
 #include <vector>
 #include <map>
@@ -45,23 +45,23 @@
 #include <climits>
 using namespace std;
 
-class Graph {
+class WDAGraph {
 
 	public:
-		// Graph()
-		//  Purpose: Create a Graph
+		// WDAGraph()
+		//  Purpose: Create a WDAGraph
 		//	Preconditons:
 		//	Postconditions:
-		Graph();
+		WDAGraph();
 
-		// ~Graph(void)
-		//  Purpose: Destructor for Graph Object
+		// ~WDAGraph(void)
+		//  Purpose: Destructor for WDAGraph Object
 		//  Preconditions:
 		//  Postcondtions:
-		~Graph();
+		~WDAGraph();
 
-		// buildGraph(istream& infile)
-		//   Purpose: Build a graph from an input file
+		// buildWDAGraph(istream& infile)
+		//   Purpose: Build a WDAGraph from an input file
 		//		- NO ERROR CHECKING FOR INCORRECT DATA FORMATS!
 		//		  The data in the input file is assumed to be in the
 		//        correct format as specified in the precondtions. This
@@ -77,27 +77,28 @@ class Graph {
 		//			edge.  If there is an edge from node 1 to node 2 with
 		//			a label of 10, the data is: 1 2 10.
 		//		  - A zero for the first integer signifies the end of the data
-		//          for that one graph.
+		//          for that one WDAGraph.
 		//   Postcondtions:
-		//		- The object will be popultated with the graph data defined
+		//		- The object will be popultated with the WDAGraph data defined
 		//		  by the infile
-		void buildGraph(string& fileName);
+		void buildWDAGraph(string& fileName);
 
 		// findShortestPath()
 		//   Purpose: Use the dijkstra algorithm to find the shortest path
-		//			  for all the vertices in the graph
-		//	 Precondtions: Graph should be fully formed with appropriate costs
+		//			  for all the vertices in the WDAGraph
+		//	 Precondtions: WDAGraph should be fully formed with appropriate costs
 		//			       in the cost array
 		//   Postcondtions:
 		//		- the shortestPath array will be populated with the data
 		//		  corresponding to the shortest path for each vertext in the
-		//		  graph
+		//		  WDAGraph
 		void findHighestWeightPath();
 
 		string resultString();
 
 private:
 
+		struct Edge;
 
 		struct Vertex {
 			string label;  // name of vertex
@@ -113,9 +114,9 @@ private:
 		};
 
 
-		vector<Vertex*> vertices; // data for graph vertices
+		vector<Vertex*> vertices; // data for WDAGraph vertices
 		map<string, vector<Edge*>> edges; // Collection of edges
-		int numVertices; // number of vertices in the graph
+		int numVertices; // number of vertices in the WDAGraph
 		map<string, Vertex*> verticeMap;
 		Vertex* startNode;
 		Vertex* endNode;
