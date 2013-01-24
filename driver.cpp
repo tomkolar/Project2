@@ -19,7 +19,7 @@ int main( int argc, char *argv[] ) {
 	}
 */
 
-	string fileName = "/Users/tomkolar/documents/Genome540/Assignment2/test_graph.txt";
+	string fileName = "c:/Users/kolart/Documents/Genome540/Assignment2/example_constraint_graph.txt";
 
 	WDAGraph aGraph = WDAGraph();
 	aGraph.buildWDAGraph(fileName);

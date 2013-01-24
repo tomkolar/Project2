@@ -114,7 +114,7 @@ void WDAGraph::buildWDAGraph(string& fileName) {
 void WDAGraph::addVertex(vector<string>& tokens) {
 
 	// Create vetex and intialize 
-	Vertex* vertex;
+	Vertex* vertex =  new Vertex();
 	vertex->weight = INT_MIN;
 	vertex->edgeForHWPath = NULL;
 
@@ -135,7 +135,7 @@ void WDAGraph::addVertex(vector<string>& tokens) {
 void WDAGraph::addEdge(vector<string>& tokens) {
 
 	// Create Edge and populate from tokens
-	Edge* edge;
+	Edge* edge = new Edge();
 	edge->label = tokens.at(1);
 	edge->start = verticeMap.find(tokens.at(2))->second;
 	edge->end = verticeMap.find(tokens.at(3))->second;
@@ -144,7 +144,7 @@ void WDAGraph::addEdge(vector<string>& tokens) {
 	// Add to edges collection
 	vector<Edge*>& startEdges = edges.find((edge->start)->label)->second;
 	startEdges.push_back(edge);
-	vector<Edge*>& endEdges = edges.find((edge->start)->label)->second;
+	vector<Edge*>& endEdges = edges.find((edge->end)->label)->second;
 	endEdges.push_back(edge);
 }
 
@@ -223,11 +223,11 @@ void WDAGraph::findHighestWeightPath() {
 }
 
 bool WDAGraph::isStartConstrained() {
-	return startNode == NULL;
+	return startNode != NULL;
 }
 
 bool WDAGraph::isEndConstrained() {
-	return endNode == NULL;
+	return endNode != NULL;
 }
 
 string WDAGraph::resultString() {
@@ -253,8 +253,16 @@ string WDAGraph::getPathStartNodeLabel() {
 
 	// Search for start node (previous is NULL)
 	Vertex* aNode = highestWeightNode;
-	while (aNode->weight > 0) {
-		// Walk backwards until find the node with weight zero
+	while (true) {
+		// Done if this is start node
+		if (isStartConstrained()) {
+			if (aNode->label == startNode->label)
+				break;
+		}
+		else if (aNode->weight == 0)
+			break;
+
+		// Walk backwards until find the start node
 		Edge* anEdge = aNode->edgeForHWPath;
 		aNode = anEdge->start;
 	}
@@ -279,10 +287,16 @@ string WDAGraph::getPath() {
 
 		// Add the label from the edge to the string stream
 		Edge* anEdge = aNode->edgeForHWPath;
+		if (anEdge == NULL)
+			break;
 		ss << anEdge->label;
 
 		// Done if this is start node
-		if (aNode->weight == 0)
+		if (isStartConstrained()) {
+			if (aNode->label == startNode->label)
+				break;
+		}
+		else if (aNode->weight == 0)
 			break;
 
 		// Walk backwards one node
