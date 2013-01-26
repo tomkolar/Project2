@@ -48,10 +48,20 @@ using namespace std;
 //  Purpose: Create a WDAGraph
 //	Preconditons:
 //	Postconditions:
-WDAGraph::WDAGraph() {
+WDAGraph::WDAGraph(string& aGraphFileName, string& aWeightFileName) {
+
+	// Initialize pointers
 	startNode = NULL;
 	endNode = NULL;
 	highestWeightNode = NULL;
+
+	//  Set file names
+	graphFileName = aGraphFileName;
+	weightFileName = aWeightFileName;
+	
+	if (weightsAreSpecifiedExternally())
+		buildWeightMap();
+	buildGraph();
 }
 
 // ~WDAGraph(void)
@@ -60,6 +70,20 @@ WDAGraph::WDAGraph() {
 //  Postcondtions:
 WDAGraph::~WDAGraph(){
 
+}
+
+void WDAGraph::buildWeightMap() {
+	ifstream weightFile(weightFileName);
+	string line;
+
+	while(getline(weightFile, line)) {
+		vector<string> tokens;
+		StringUtilities::split(line, ' ', tokens);
+
+		edgeWeights[tokens.at(0)] = atoi(tokens.at(1).c_str());
+	}
+
+	weightFile.close();
 }
 
 // buildWDAGraph(istream& infile)
@@ -83,13 +107,12 @@ WDAGraph::~WDAGraph(){
 //   Postcondtions:
 //		- The object will be popultated with the WDAGraph data defined
 //		  by the infile
-void WDAGraph::buildWDAGraph(string& fileName) {
+void WDAGraph::buildGraph() {
 
-	ifstream inFile(fileName);
+	ifstream graphFile(graphFileName);
 	string line;
-	bool edgesInit = false;
 
-	while(getline(inFile, line)) {
+	while(getline(graphFile, line)) {
 		vector<string> tokens;
 		StringUtilities::split(line, ' ', tokens);
 
@@ -97,17 +120,11 @@ void WDAGraph::buildWDAGraph(string& fileName) {
 		if (tokens.at(0) == "V") 
 			addVertex(tokens);
 		// Add Edges
-		else if (tokens.at(0) == "E") {
-			// Initialize edges if first time encountered an edge
-			if (!edgesInit) {
-				numVertices = vertices.size();
-				for (Vertex* vertex : vertices)
-					edges[vertex->label] = vector<Edge*>();
-				edgesInit = true;
-			}
+		else if (tokens.at(0) == "E") 
 			addEdge(tokens);
-		}
 	}
+
+	graphFile.close();
 
 }
 
@@ -129,7 +146,11 @@ void WDAGraph::addVertex(vector<string>& tokens) {
 
 	// Add to collections
 	vertices.push_back(vertex);
-	verticeMap[vertex->label] = vertex;;
+	verticeMap[vertex->label] = vertex;
+
+	// initialize edges entry for this vertex
+	edges[vertex->label] = vector<Edge*>();
+
 }
 
 void WDAGraph::addEdge(vector<string>& tokens) {
@@ -139,13 +160,31 @@ void WDAGraph::addEdge(vector<string>& tokens) {
 	edge->label = tokens.at(1);
 	edge->start = verticeMap.find(tokens.at(2))->second;
 	edge->end = verticeMap.find(tokens.at(3))->second;
-	edge->weight = atoi(tokens.at(4).c_str());
+
+	// Set weight from weights map if it exists, otherwise set from graph file
+	if (weightsAreSpecifiedExternally())
+		edge->weight = edgeWeights.find(edge->label)->second;
+	else 
+		edge->weight = atof(tokens.at(4).c_str());
+
 
 	// Add to edges collection
 	vector<Edge*>& startEdges = edges.find((edge->start)->label)->second;
 	startEdges.push_back(edge);
 	vector<Edge*>& endEdges = edges.find((edge->end)->label)->second;
 	endEdges.push_back(edge);
+
+	// Add to edgeWeights if not externally specified
+	if (!weightsAreSpecifiedExternally())
+		edgeWeights[edge->label] = edge->weight;
+
+	// Increment edgeFrequencies
+	map<string, int>::iterator iter = edgeFrequencies.find(edge->label);
+	if (iter != edgeFrequencies.end()) 
+		edgeFrequencies[edge->label] = iter->second++;
+	else
+		edgeFrequencies[edge->label] = 1;
+
 }
 
 // findShortestPath()
@@ -164,36 +203,35 @@ void WDAGraph::findHighestWeightPath() {
 	// Iterate through the vertices
 	for (Vertex* vertex : vertices) {
 		// Check to for start constraints
-		if (isStartConstrained() && !startFound) {
-			if (vertex->label == startNode->label)
-				startFound = true;
-			else
-				// Haven't found start yet, so no need to calculate weight
-				continue;
-		}
-
-		// Check for depth 0 (no edges leading to this vertex)
-		bool isDepthZero = true;
-		vector<Edge*>& vertexEdges = edges.find(vertex->label)->second;
-		for (Edge* edge : vertexEdges) {
-			if (edge->end->label == vertex->label) {
-				isDepthZero = false;
-				break;
+		if (isStartConstrained()) {
+			if (!startFound ) {
+				if (vertex->label == startNode->label) {
+					startFound = true;
+					vertex->weight = 0;
+					highestWeightNode = vertex;
+				}
+				else // start not found yet
+					continue;
 			}
 		}
-		if (isDepthZero) {
+		else {
+			// Start not constrained - so consider the trivial path of starting here
 			vertex->weight = 0;
-			continue;
 		}
 
+
 		// Find the path with the highest weight to this vertex
-		vertex->weight = 0;
-		vertexEdges = edges.find(vertex->label)->second;
+		vector<Edge*> vertexEdges = edges.find(vertex->label)->second;
 		for (Edge* edge : vertexEdges) {
 			// Find edges where this vertex is the end node
 			if (edge->end->label == vertex->label) {
+				// If start constrained make sure edge start is from a valid path
+				if  (isStartConstrained()) {
+					if (edge->start->weight == INT_MIN)
+						continue;
+				}
 				// Calculate weight (parent node weight plus edge weight)
-				int pathWeight = edge->start->weight + edge->weight;
+				double pathWeight = edge->start->weight + edge->weight;
 
 				// If path weight bigger than any other found so far then
 				// it becomes the new weight for the vertex
@@ -206,7 +244,9 @@ void WDAGraph::findHighestWeightPath() {
 
 		// Check for end constraint
 		if (isEndConstrained()) {
+			// Is this the end node?
 			if (vertex->label == endNode->label) {
+				// Found end node, so set it as highest and exit vertex for loop
 				highestWeightNode = vertex;
 				break;
 			}
@@ -214,7 +254,7 @@ void WDAGraph::findHighestWeightPath() {
 			continue;
 		}
 
-		// Set highestWeightNode
+		// Set highestWeightNode (for non end constrained paths)
 		if (highestWeightNode == NULL || vertex->weight > highestWeightNode->weight)
 			highestWeightNode = vertex;
 
@@ -230,19 +270,58 @@ bool WDAGraph::isEndConstrained() {
 	return endNode != NULL;
 }
 
+bool WDAGraph::weightsAreSpecifiedExternally() {
+	return !weightFileName.empty();
+}
+
 string WDAGraph::resultString() {
 	stringstream ss;
+	// Results header
+	ss << "  <results type=\"part?\" file=\"" << graphFileName << "\">\n";
+
+	// Edge Info (Weights and Histogram)
+	ss << StringUtilities::xmlResult("edge_weights", getEdgeWeights());
+	ss << StringUtilities::xmlResult("edge_histogram", getEdgeFrequencies());
+
+	// Path Info
 	if (highestWeightNode == NULL)
-		ss << "No Path Found!";
+		ss << StringUtilities::xmlResult("path", "No Path Found!");
 	else {
 		ss
-			<< "Score: " << highestWeightNode->weight << "\n"
-			<< "Start: " << getPathStartNodeLabel() << "\n"
-			<< "End: " << highestWeightNode->label << "\n"
-			<< "Path: " << getPath() << "\n";
+			<< StringUtilities::xmlResult("score",  highestWeightNode->weight, 2)
+			<< StringUtilities::xmlResult("beginning_vertex",  getPathStartNodeLabel())
+			<< StringUtilities::xmlResult("end_vertex", highestWeightNode->label)
+			<< StringUtilities::xmlResult("path", getPath());
 	}
 
 	return ss.str();
+}
+
+string WDAGraph::getEdgeWeights() {
+	stringstream ss;
+	ss.precision(2);
+
+	// Iterate throght edge weights map
+	for (auto edgeWeight : edgeWeights) {
+		ss << edgeWeight.first << "=" << edgeWeight.second << ", ";
+	}
+
+	// Return all but last 2 char (as there will be an extra ,<space> at end)
+	string temp = ss.str();
+	return temp.substr(0, temp.length() -2);
+}
+
+string WDAGraph::getEdgeFrequencies() {
+	stringstream ss;
+
+	// Iterate throght edge weights map
+	for (auto edgeFrequency : edgeFrequencies) {
+		ss << edgeFrequency.first << "=" << edgeFrequency.second << ", ";
+	}
+
+	// Return all but last 2 char (as there will be an extra ,<space> at end)
+	string temp = ss.str();
+	return temp.substr(0, temp.length() -2);
 }
 
 string WDAGraph::getPathStartNodeLabel() {
@@ -253,15 +332,7 @@ string WDAGraph::getPathStartNodeLabel() {
 
 	// Search for start node (previous is NULL)
 	Vertex* aNode = highestWeightNode;
-	while (true) {
-		// Done if this is start node
-		if (isStartConstrained()) {
-			if (aNode->label == startNode->label)
-				break;
-		}
-		else if (aNode->weight == 0)
-			break;
-
+	while (aNode->edgeForHWPath != NULL) {
 		// Walk backwards until find the start node
 		Edge* anEdge = aNode->edgeForHWPath;
 		aNode = anEdge->start;
@@ -280,24 +351,10 @@ string WDAGraph::getPath() {
 
 	// Walk path backwards and build string
 	Vertex* aNode = highestWeightNode;
-	while (true) {
-		// Check for null node
-		if (aNode == NULL)
-			break;
-
+	while (aNode->edgeForHWPath != NULL) {
 		// Add the label from the edge to the string stream
 		Edge* anEdge = aNode->edgeForHWPath;
-		if (anEdge == NULL)
-			break;
 		ss << anEdge->label;
-
-		// Done if this is start node
-		if (isStartConstrained()) {
-			if (aNode->label == startNode->label)
-				break;
-		}
-		else if (aNode->weight == 0)
-			break;
 
 		// Walk backwards one node
 		aNode = anEdge->start;

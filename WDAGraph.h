@@ -53,6 +53,7 @@ class WDAGraph {
 		//	Preconditons:
 		//	Postconditions:
 		WDAGraph();
+		WDAGraph(string& aGraphFileName, string& aWeightFileName);
 
 		// ~WDAGraph(void)
 		//  Purpose: Destructor for WDAGraph Object
@@ -81,7 +82,6 @@ class WDAGraph {
 		//   Postcondtions:
 		//		- The object will be popultated with the WDAGraph data defined
 		//		  by the infile
-		void buildWDAGraph(string& fileName);
 
 		// findShortestPath()
 		//   Purpose: Use the dijkstra algorithm to find the shortest path
@@ -102,18 +102,19 @@ private:
 
 		struct Vertex {
 			string label;  // name of vertex
-			int weight; // highest path weight to get to the vertex
+			double weight; // highest path weight to get to the vertex
 			Edge* edgeForHWPath; // edge that was used for the highest weight path
 		};
 
 		struct Edge {
 			string label;
-			int weight;
+			double weight;
 			Vertex* start;
 			Vertex* end;
 		};
 
-
+		string graphFileName;
+		string weightFileName;
 		vector<Vertex*> vertices; // data for WDAGraph vertices
 		map<string, vector<Edge*>> edges; // Collection of edges
 		int numVertices; // number of vertices in the WDAGraph
@@ -121,13 +122,21 @@ private:
 		Vertex* startNode;
 		Vertex* endNode;
 		Vertex* highestWeightNode;
+		map<string, double> edgeWeights;
+		map<string, int> edgeFrequencies;
 
+		void buildGraph();
+		void buildWeightMap();
 		bool isStartConstrained();
 		bool isEndConstrained();
+		bool weightsAreSpecifiedExternally();
 		void addVertex(vector<string>& tokens);
 		void addEdge(vector<string>& tokens);
+		string getEdgeWeights();
+		string getEdgeFrequencies();
 		string getPathStartNodeLabel();
 		string getPath();
+
 
 };
 #endif

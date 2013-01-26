@@ -19,10 +19,10 @@ int main( int argc, char *argv[] ) {
 	}
 */
 
-	string fileName = "c:/Users/kolart/Documents/Genome540/Assignment2/example_constraint_graph.txt";
+	string graphFileName = "c:/Users/kolart/Documents/Genome540/Assignment2/example_constraint_graph.txt";
+	string weightFileName = "";
 
-	WDAGraph aGraph = WDAGraph();
-	aGraph.buildWDAGraph(fileName);
+	WDAGraph aGraph = WDAGraph(graphFileName, weightFileName);
 	aGraph.findHighestWeightPath();
 
 	cout << aGraph.resultString();

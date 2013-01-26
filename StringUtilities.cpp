@@ -28,3 +28,31 @@ vector<string>& StringUtilities::split(const string& s, char delim, vector<strin
     }
     return elems;
 }
+
+string StringUtilities::xmlResult(const string& type, const string& value) {
+	stringstream ss;
+	ss
+		<< "    <result type =\"" << type << "\">" << value << "<\\result>\n";
+
+	return ss.str();
+}
+
+string StringUtilities::xmlResult(const string& type, const double value, const int precision){
+	stringstream ss;
+	ss.precision(precision);
+	ss
+		<< "    <result type =\"" << type << "\">" << value << "<\\result>\n";
+
+	return ss.str();
+}
+
+
+string StringUtilities::xmlResultFormatted(const string& type, const string& value) {
+	stringstream ss;
+	ss
+		<< "    <result type =\"" << type << "\">" << "\n"
+		<< "      " << value << "\n" 
+		<<"    <\\result>\n";
+
+	return ss.str();
+}
