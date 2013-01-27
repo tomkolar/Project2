@@ -1,37 +1,69 @@
-//*  is used to demonstate adjacentcy maxtrices and the
-//*  dijkstra's shortest path alogrithm.
-//*
-//*  ******** WARNING *****WARNING ***** WARNING ************************
-//*  *																    *
-//*  *  This is not a fully implented class!                            *
-//*  *  Due to time constraints, and the fact that this is              *
-//*  *  written mostly for demonstration purposes, the following        *
-//*  *  methods have not been implemented: Copy Constructor, =, ==, !=. *
-//*  *																    *
-//*  ******** WARNING *****WARNING ***** WARNING ************************
-//*
-//*  Use buildWDAGraph(istream& infile) to create a WDAGraph from
-//*  a text file.  See notes on buildWDAGraph method for expected
-//*  format of data in the file.
-//*
-//*  Use findShortestPath() to run dijkstra's algorithm and determine
-//*  the shortest path from all nodes to all nodes in the WDAGraph.
-//*
-//*  Displaying Path:  You must call findShortestPath() before using
-//*  either of the display options
-//*
-//*		- Use displayAll() to display all vertices in the WDAGraph and the
-//*		  shortest path as determined by dijsktra's algorithm.
-//*
-//*		- Use display(int from, int to) to display the shortest path
-//*       as determined by dijkstra's algorithm from a particular node
-//*       to a particular node.
-//*
-//*  Author:  Tom Kolar
-//*
-//*  Created: 1-21-12
-//*
-//****************************************************
+/*
+ * WDAGraph.h
+ *
+ *	This is the header file for the WDAGraph object. WDAGraph is an implementation
+ *	of a weighted directed acyclic graph.  It is implmented using adjacency lists
+ *  as the typical expected use is a sparsely connected graph (e.g. a sequence
+ *  graph).
+ *
+ *  ************* WARNING ***********************************
+ *  *  There is no error handling in place for this object! *
+ *  *  This means that if the file does not exist or is     *
+ *  *  formatted incorrectly, you will get an error and     *
+ *  *  will not be able to use this object.                 *
+ *  *                                                       *
+ *  *  If this code gets moved to a production setting      *
+ *  *  appropriate error handling should be implemented!    *
+ *  *********************************************************
+ *
+ *  Typical use for the file would be to use the WDAGraph(graphFileName)
+ *  constructor to create the object.  This will automatically open the
+ *  graph describer file specified by graphfileName, and read its contents
+ *  storing them in the vertices vector and edges map.
+ *
+ *  The file is expected to be formatted as follows:
+ *
+ *	  1. A list of vertices, with each vertex on a separate line.  The vertices
+ *		 are in depth order (parents preced children), and this order will be
+ *		 used in the findHieghestWeightPath() method.  Each line for a vertex 
+ *		 should have the following format
+ *
+ *			V label <START or END>
+ *
+ *		  - The 'V" char indicates the line is for a vertex.
+ *		  - The label for the vertex should be unique, i.e. different for
+ *			different vertices.
+ *		  - The string "START" if the path is to be constrained to start 
+ *			at this vertex
+ *		  - The string "END" if the path is to be constrained to end at this
+ *			vertex
+ *
+ *		 At most one vertex should be designated the START and at most one
+ *		 vertex should be designated the END. If none are, the path is assumed
+ *		 to be unconstrained.
+ *
+ *	  2. A list of edges, with each edge on a separate line.  The line should have
+ *		 the following format:
+ *
+ *			E label start_vertex end_vertex weight
+ *
+ *		  - The 'E" char indicates the line is for an edge.
+ *		  - The label for the edge does not have to be unique (i.e. different edges
+ *			can have the same label)
+ *		  - start_vertex is the label of the edge's beginning vertex
+ *		  - end_verex is the label of the edge's ending vertex
+ *		  - weight is the numerical weight attached to the edge
+ *
+ *  After creating the object, typical use would be to call the findHighestWeightPath()
+ *  which will find the path with the highest weight using dynamic programming.
+ *
+ *  Finally one would typically call the resultString() method to get a formatted set
+ *	of results indicating the path with the highest weight.
+ *
+ *  Created on: 1-21-13
+ *      Author: tomkolar
+ */
+
 #include "WDAGraph.h"
 #include "StringUtilities.h"
 #include <limits>
@@ -44,158 +76,62 @@
 using namespace std;
 
 
-// WDAGraph()
-//  Purpose: Create a WDAGraph
-//	Preconditons:
-//	Postconditions:
-WDAGraph::WDAGraph(string& aGraphFileName, string& aWeightFileName) {
+// Constuctors
+// ==============================================
+WDAGraph::WDAGraph() {
+	
+}
+
+WDAGraph::WDAGraph(string& aGraphFileName) {
 
 	// Initialize pointers
 	startNode = NULL;
 	endNode = NULL;
 	highestWeightNode = NULL;
 
-	//  Set file names
+	//  Set file name
 	graphFileName = aGraphFileName;
-	weightFileName = aWeightFileName;
 	
-	if (weightsAreSpecifiedExternally())
-		buildWeightMap();
+	// Build the graph
 	buildGraph();
 }
 
-// ~WDAGraph(void)
-//  Purpose: Destructor for WDAGraph Object
-//  Preconditions:
-//  Postcondtions:
+// Destructor
+// =============================================
 WDAGraph::~WDAGraph(){
 
 }
 
-void WDAGraph::buildWeightMap() {
-	ifstream weightFile(weightFileName);
-	string line;
+// Public Methods
+// =============================================
 
-	while(getline(weightFile, line)) {
-		vector<string> tokens;
-		StringUtilities::split(line, ' ', tokens);
-
-		edgeWeights[tokens.at(0)] = atoi(tokens.at(1).c_str());
-	}
-
-	weightFile.close();
-}
-
-// buildWDAGraph(istream& infile)
-//   Purpose: Build a WDAGraph from an input file
-//		- NO ERROR CHECKING FOR INCORRECT DATA FORMATS!
-//		  The data in the input file is assumed to be in the
-//        correct format as specified in the precondtions. This
-//		  is done so as to make the code more readable. If this
-//        code changes to production, error checking will need
-//        to be implemented within the framework of the application.
-//	 Precondtions:
-//		File must follow predfined format as follows:
-//		  - The first line tells the number of nodes, say n.
-//		  - Following is a text description of each of the 1 through n
-//          nodes, one description per line (max length of 50).
-//		  - After that, each line consists of 3 ints representing an
-//			edge.  If there is an edge from node 1 to node 2 with
-//			a label of 10, the data is: 1 2 10.
-//		  - A zero for the first integer signifies the end of the data
-//          for that one WDAGraph.
-//   Postcondtions:
-//		- The object will be popultated with the WDAGraph data defined
-//		  by the infile
-void WDAGraph::buildGraph() {
-
-	ifstream graphFile(graphFileName);
-	string line;
-
-	while(getline(graphFile, line)) {
-		vector<string> tokens;
-		StringUtilities::split(line, ' ', tokens);
-
-		// Add vertices
-		if (tokens.at(0) == "V") 
-			addVertex(tokens);
-		// Add Edges
-		else if (tokens.at(0) == "E") 
-			addEdge(tokens);
-	}
-
-	graphFile.close();
-
-}
-
-void WDAGraph::addVertex(vector<string>& tokens) {
-
-	// Create vetex and intialize 
-	Vertex* vertex =  new Vertex();
-	vertex->weight = INT_MIN;
-	vertex->edgeForHWPath = NULL;
-
-	// Populate from tokens
-	vertex->label = tokens.at(1);
-	if (tokens.size() > 2) {
-		if (tokens.at(2) == "START")
-			startNode = vertex;
-		else if (tokens.at(2) == "END")
-			endNode = vertex;
-	}
-
-	// Add to collections
-	vertices.push_back(vertex);
-	verticeMap[vertex->label] = vertex;
-
-	// initialize edges entry for this vertex
-	edges[vertex->label] = vector<Edge*>();
-
-}
-
-void WDAGraph::addEdge(vector<string>& tokens) {
-
-	// Create Edge and populate from tokens
-	Edge* edge = new Edge();
-	edge->label = tokens.at(1);
-	edge->start = verticeMap.find(tokens.at(2))->second;
-	edge->end = verticeMap.find(tokens.at(3))->second;
-
-	// Set weight from weights map if it exists, otherwise set from graph file
-	if (weightsAreSpecifiedExternally())
-		edge->weight = edgeWeights.find(edge->label)->second;
-	else 
-		edge->weight = atof(tokens.at(4).c_str());
-
-
-	// Add to edges collection
-	vector<Edge*>& startEdges = edges.find((edge->start)->label)->second;
-	startEdges.push_back(edge);
-	vector<Edge*>& endEdges = edges.find((edge->end)->label)->second;
-	endEdges.push_back(edge);
-
-	// Add to edgeWeights if not externally specified
-	if (!weightsAreSpecifiedExternally())
-		edgeWeights[edge->label] = edge->weight;
-
-	// Increment edgeFrequencies
-	map<string, int>::iterator iter = edgeFrequencies.find(edge->label);
-	if (iter != edgeFrequencies.end()) 
-		edgeFrequencies[edge->label] = iter->second++;
-	else
-		edgeFrequencies[edge->label] = 1;
-
-}
-
-// findShortestPath()
-//   Purpose: Use the dijkstra algorithm to find the shortest path
-//			  for all the vertices in the WDAGraph
-//	 Precondtions: WDAGraph should be fully formed with appropriate costs
-//			       in the cost array
-//   Postcondtions:
-//		- the shortestPath array will be populated with the data
-//		  corresponding to the shortest path for each vertext in the
-//		  WDAGraph
+// findHighestWeightPath()
+//  Purpose: 
+//		Uses dynamic programming to find the highest weight path
+//		through the graph.  The essential idea is to iterate 
+//		through the vertices in a depth first order and calculate
+//		the highest weight for each vertex.  If the current vertex
+//		weight is higher than any found so far, than it becomes
+//		the end point of the path.
+//
+//		The highest weight is determined by taking the max weight
+//		of:
+//			1. the trivial path of starting at the current vertex (weight = 0)
+//		and 2. for each edge that ends at the vertex
+//				  - the weight of the edges start vertex + the edge weight
+//
+//		The algorithm changes slightly if it is constrained to start or end on 
+//		a particular node.
+//
+//			Start constrained - the trivial path is not considered unless
+//								the vertex is the start vertex
+//			End Constrained - only the end vertex can be set to the highest
+//							  weight path
+//
+//  Postconditions:
+//		- vertex objects in the vertices collection will have their weight 
+//		  and edgeForHWPAth set
+//		- highestWeightPath attribute will be set
 void WDAGraph::findHighestWeightPath() {
 
 	bool startFound = false;
@@ -262,18 +198,22 @@ void WDAGraph::findHighestWeightPath() {
 	
 }
 
-bool WDAGraph::isStartConstrained() {
-	return startNode != NULL;
-}
-
-bool WDAGraph::isEndConstrained() {
-	return endNode != NULL;
-}
-
-bool WDAGraph::weightsAreSpecifiedExternally() {
-	return !weightFileName.empty();
-}
-
+// string resultString()
+//  Purpose:
+//		Returns an XML formatted string representing the results of the
+//		findHighestWeightPath() function.
+//
+//		format:
+//			<results type="part?" file=" <<graphFileName>> ">";
+//			  <result type="edge_weights"> <<weights for each edge label>> </result>
+//			  <result type="edge_histogram">  << frequencies for each edge label>> </result>
+//			  <result type="score"> <<highest weight path score>> </result>
+//			  <result type="beginning_vertex"> <<start vertex for path>> </result>
+//			  <result type="ending_vertex"> <<end vertex for path>> </result>
+//			  <result type="path"> << list of path edge labels in order>> </result>
+//			</results>
+//  Preconditions:
+//		findHighestWeightPath() has been run
 string WDAGraph::resultString() {
 	stringstream ss;
 	// Results header
@@ -288,7 +228,7 @@ string WDAGraph::resultString() {
 		ss << StringUtilities::xmlResult("path", "No Path Found!");
 	else {
 		ss
-			<< StringUtilities::xmlResult("score",  highestWeightNode->weight, 2)
+			<< StringUtilities::xmlResult("score",  highestWeightNode->weight, 3)
 			<< StringUtilities::xmlResult("beginning_vertex",  getPathStartNodeLabel())
 			<< StringUtilities::xmlResult("end_vertex", highestWeightNode->label)
 			<< StringUtilities::xmlResult("path", getPath());
@@ -297,9 +237,134 @@ string WDAGraph::resultString() {
 	return ss.str();
 }
 
+// Private Methods
+// =============================================
+
+// string buildGraph()
+//  Purpose:
+//		Build the graph from the information contained in the graphFile.
+//		The graph is built by iterating through the lines of the file.
+//		If the first char is a V then a vertex is added to the vertices
+//		collection, if the the first char is an E then an edge is added
+//		to the edges collection. See class header for description of file
+//		contents. 
+//  Postconditions:
+//		The following attirbutes will be populated:
+//			vertices, verticeMap, startNode, endNode,
+//			edges, edgeWeights, edgeFrequencies
+void WDAGraph::buildGraph() {
+
+	ifstream graphFile(graphFileName);
+	string line;
+
+	while(getline(graphFile, line)) {
+		vector<string> tokens;
+		StringUtilities::split(line, ' ', tokens);
+
+		// Add vertices
+		if (tokens.at(0) == "V") 
+			addVertex(tokens);
+		// Add Edges
+		else if (tokens.at(0) == "E") 
+			addEdge(tokens);
+	}
+
+	graphFile.close();
+
+}
+
+// addVertex(vector<string>& tokens)
+//  Purpose:
+//		Adds a new vertex from the line read in from the graph file.
+//  Postconditions:
+//		vertices - vertex added
+//		veritceMap - vertex added
+//		edges - entry for vertex initialized
+void WDAGraph::addVertex(vector<string>& tokens) {
+
+	// Create vetex and intialize 
+	Vertex* vertex =  new Vertex();
+	vertex->weight = INT_MIN;
+	vertex->edgeForHWPath = NULL;
+
+	// Populate from tokens
+	vertex->label = tokens.at(1);
+	if (tokens.size() > 2) {
+		if (tokens.at(2) == "START")
+			startNode = vertex;
+		else if (tokens.at(2) == "END")
+			endNode = vertex;
+	}
+
+	// Add to collections
+	vertices.push_back(vertex);
+	verticeMap[vertex->label] = vertex;
+
+	// initialize edges entry for this vertex
+	edges[vertex->label] = vector<Edge*>();
+
+}
+
+// addEdge(vector<string>& tokens)
+//  Purpose:
+//		Adds a new edge from the line read in from the graph file.
+//  Postconditions:
+//		edges - edge added to start and end vertex vectors
+//		edgeWeights - entry added for edge (first time label encountered)
+//		edgeFrequencies - entry for edge label incremented by 1
+void WDAGraph::addEdge(vector<string>& tokens) {
+
+	// Create Edge and populate from tokens
+	Edge* edge = new Edge();
+	edge->label = tokens.at(1);
+	edge->start = verticeMap.find(tokens.at(2))->second;
+	edge->end = verticeMap.find(tokens.at(3))->second;
+	edge->weight = atof(tokens.at(4).c_str());
+
+
+	// Add to edges collection
+	vector<Edge*>& startEdges = edges.find((edge->start)->label)->second;
+	startEdges.push_back(edge);
+	vector<Edge*>& endEdges = edges.find((edge->end)->label)->second;
+	endEdges.push_back(edge);
+
+	// Add to edgeWeights if not already in map ]
+	map<string, double>::iterator weightsIter = edgeWeights.find(edge->label);
+	if (weightsIter == edgeWeights.end()) 
+		edgeWeights[edge->label] = edge->weight;
+
+	// Increment edgeFrequencies
+	map<string, int>::iterator freqIter = edgeFrequencies.find(edge->label);
+	if (freqIter != edgeFrequencies.end()) 
+		edgeFrequencies[edge->label] = freqIter->second++;
+	else
+		edgeFrequencies[edge->label] = 1;
+
+}
+
+// bool isStartConstrained()
+//  Purpose:
+//		Returns true if a start vertex is designated in the graph file
+bool WDAGraph::isStartConstrained() {
+	return startNode != NULL;
+}
+
+// bool isEndConstrained()
+//  Purpose:
+//		Returns true if an end vertex is designated in the graph file
+bool WDAGraph::isEndConstrained() {
+	return endNode != NULL;
+}
+
+// string getEdgeWeights()
+//  Purpose:
+//		Returns a comma delimited string describing each of the edge labels
+//		and its correpsonding weight.
+//
+//		Format:		<edge label> = <edge weight>
 string WDAGraph::getEdgeWeights() {
 	stringstream ss;
-	ss.precision(2);
+	ss.precision(3);
 
 	// Iterate throght edge weights map
 	for (auto edgeWeight : edgeWeights) {
@@ -311,6 +376,13 @@ string WDAGraph::getEdgeWeights() {
 	return temp.substr(0, temp.length() -2);
 }
 
+// string getEdgeFrequenciess()
+//  Purpose:
+//		Returns a comma delimited string describing each of the edge labels
+//		and its correpsonding frequency (the number of edges in the graph
+//		that use that label).
+//
+//		Format:		<edge label> = <edge frequency>
 string WDAGraph::getEdgeFrequencies() {
 	stringstream ss;
 
@@ -324,6 +396,9 @@ string WDAGraph::getEdgeFrequencies() {
 	return temp.substr(0, temp.length() -2);
 }
 
+// string getPathStartNodeLabel()
+//  Purpose:
+//		Returns the label for the start node from the highest weight path.
 string WDAGraph::getPathStartNodeLabel() {
 
 	// Base Case
@@ -341,6 +416,10 @@ string WDAGraph::getPathStartNodeLabel() {
 	return aNode->label;
 }
 
+// string getPath()
+//  Purpose:
+//		Returns a string representing the edge labels for the highest weight
+//		path.  The edge labels are listed from the start to the end of the path.
 string WDAGraph::getPath() {
 
 	// Base Case
