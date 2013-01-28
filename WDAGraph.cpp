@@ -1,7 +1,7 @@
 /*
- * WDAGraph.h
+ * WDAGraph.cpp
  *
- *	This is the header file for the WDAGraph object. WDAGraph is an implementation
+ *	This is the cpp file for the WDAGraph object. WDAGraph is an implementation
  *	of a weighted directed acyclic graph.  It is implmented using adjacency lists
  *  as the typical expected use is a sparsely connected graph (e.g. a sequence
  *  graph).
@@ -99,6 +99,41 @@ WDAGraph::WDAGraph(string& aGraphFileName) {
 // Destructor
 // =============================================
 WDAGraph::~WDAGraph(){
+	// Remove start,end and highest
+	startNode = NULL;
+	endNode = NULL;
+	highestWeightNode = NULL;
+
+	// Remove edges from vertex
+	for (Vertex* vertex : vertices) {
+		vertex->edgeForHWPath = NULL;
+	}
+
+	// Remove vertices from edges
+	for (auto theEdges : edges) {
+		vector<Edge*>& vertexEdges = theEdges.second;
+		for (Edge* edge : vertexEdges) {
+			edge->start = NULL;
+			edge->end = NULL;
+		}
+	}
+
+	// Remove vertices
+	for (Vertex* vertex : vertices) {
+		vertex = NULL;
+	}
+	for (auto vertexEntry : verticeMap) {
+		vertexEntry.second = NULL;
+	}
+
+	// Remove  edges
+	for (auto theEdges : edges) {
+		vector<Edge*>& vertexEdges = theEdges.second;
+		for (Edge* edge : vertexEdges) {
+			edge = NULL;
+		}
+	}
+
 
 }
 
@@ -228,11 +263,15 @@ string WDAGraph::resultString() {
 		ss << StringUtilities::xmlResult("path", "No Path Found!");
 	else {
 		ss
-			<< StringUtilities::xmlResult("score",  highestWeightNode->weight, 3)
+			<< StringUtilities::xmlResult("score",  highestWeightNode->weight, 6)
 			<< StringUtilities::xmlResult("beginning_vertex",  getPathStartNodeLabel())
 			<< StringUtilities::xmlResult("end_vertex", highestWeightNode->label)
 			<< StringUtilities::xmlResult("path", getPath());
 	}
+
+	// Results footer
+	ss << "  </results>\n";
+
 
 	return ss.str();
 }

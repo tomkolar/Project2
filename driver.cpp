@@ -19,9 +19,10 @@ int main( int argc, char *argv[] ) {
 		cout << "        hwp -fasta fastaFileName weightFile\n";
 		return -1;
 	}
-
+	
+	string firstArg = argv[1];
 	// Check for correct number of args for -fasta flag
-	if (argv[1] == "-fasta" && argc < 4) {
+	if (firstArg == "-fasta" && argc < 4) {
 		cout << "Invalid # of arguments\n";
 		cout << "usage:  hwp graphFileName\n";
 		cout << "        hwp -fasta fastaFileName weightFile\n";
@@ -31,11 +32,11 @@ int main( int argc, char *argv[] ) {
 	string graphFileName;
 
 	// Create graphFile if fasta file passed in
-	if (argv[1] == "-fasta") {
+	if (firstArg == "-fasta") {
 		string fastaFileName = argv[2];
 		string fastaFileDirectory = "./";
 		string weightFileName = argv[3];
-		graphFileName = fastaFileName + "graph.txt";
+		graphFileName = fastaFileName + ".graph.txt";
 
 		FastaFile fastaFile(fastaFileDirectory, fastaFileName);
 		fastaFile.buildGraphFile(graphFileName, weightFileName);
@@ -44,7 +45,7 @@ int main( int argc, char *argv[] ) {
 		cout << fastaFile.firstLineResultString();
 	}
 	else {
-		graphFileName = argv[1];
+		graphFileName = firstArg;
 	}
 
 	// Create the WDAGraph and find the highest weight path
@@ -54,4 +55,5 @@ int main( int argc, char *argv[] ) {
 	// Print out the result string for the highest weight path
 	cout << aGraph->resultString();
 
+	aGraph = NULL;
 }
